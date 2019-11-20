@@ -52,6 +52,37 @@ namespace QtiPackageConverter.Helper
             return s;
         }
 
+        public static bool Validate(this XDocument xDoc)
+        {
+            var result = true;
+            // Set the validation settings.
+            using var sr = new StringReader(xDoc.ToString());
+            var reader = XmlReader.Create(sr, XsdHelper.GetXmlReaderSettings(ValidationEventHandler));
+
+            void ValidationEventHandler(object sender, ValidationEventArgs e)
+            {
+                result = false;
+                var orgColor = Console.ForegroundColor;
+                var type = e.Severity;
+                if (type == XmlSeverityType.Warning)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(e.Message);
+                    Console.ForegroundColor = orgColor;
+                }
+                if (type == XmlSeverityType.Error)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(e.Message);
+                    Console.ForegroundColor = orgColor;
+                }
+            }
+            // Parse the file. 
+            while (reader.Read());
+            return result;
+        }
+
+
         public static IEnumerable<XElement> FindElementsByElementAndAttributeValue(this XElement element, string elementName, string attributeName, string attributeValue)
         {
             return element.FindElementsByName(elementName)
@@ -92,50 +123,18 @@ namespace QtiPackageConverter.Helper
         /// <param name="document"></param>
         public static void ForceTags(this XDocument document)
         {
+            var allowedSelfClosingTags = new HashSet<string>
+            {
+                "br", "img", "qti-stylesheet", "qti-text-entry-interaction"
+            };
             foreach (var childElement in
                 from x in document.DescendantNodes().OfType<XElement>()
-                where x.IsEmpty
+                where x.IsEmpty && !allowedSelfClosingTags.Contains(x.Name.LocalName.ToLower())
                 select x)
             {
                 childElement.Value = string.Empty;
             }
         }
-
-        private static XmlSchemaSet _schema = null;
-        public static bool Validate(this XDocument doc)
-        {
-            var result = true;
-            var path = new Uri(Path.GetDirectoryName(Assembly.GetExecutingAssembly().CodeBase)).LocalPath;
-            if (_schema == null)
-            {
-                _schema = new XmlSchemaSet();
-                _schema.Add("http://www.imsglobal.org/xsd/imsqtiasi_v3p0", path + "\\Data\\imsqti_asiv3p0_v1p0.xsd");
-            }
-
-            void ValidationEventHandler(object sender, ValidationEventArgs e)
-            {
-                result = false;
-                var orgColor = Console.ForegroundColor;
-                var type = e.Severity;
-                if (type == XmlSeverityType.Warning)
-                {
-                    Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine(e.Message);
-                    Console.ForegroundColor = orgColor;
-                }
-                if (type == XmlSeverityType.Error)
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(e.Message);
-                    Console.ForegroundColor = orgColor;
-                }
-            }
-
-            doc.Validate(_schema, ValidationEventHandler);
-            return result;
-        }
-
-
 
 
         public static string ReplaceAllOccurrenceExceptFirst(this string source, string find, string replace)

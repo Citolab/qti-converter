@@ -121,12 +121,14 @@ namespace QtiPackageConverter.Implementations.Qti30
                     Console.WriteLine($"Converting item: {item.Identifier}");
                     var c = new ConvertItem(item, Manifest, tagNamesWithoutQtiPrefix);
                     c.Convert();
-                    if (item.ToString().IndexOf("questify", StringComparison.Ordinal) != -1)
+                    if (item.Content.ToString().IndexOf("questify", StringComparison.Ordinal) != -1)
                     {
                         var cs = new ConvertStyling(item);
                         cs.Convert();
                     }
+                    //item.Content.Validate();
                 }
+                
                 Manifest?.Save();
                 Console.WriteLine($"Successfully converted package");
             }
