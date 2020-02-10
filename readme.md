@@ -25,7 +25,7 @@ options:
 ```sh
 package.zip 30 or 22: - converts 2.1 packages to 2.2 or 2.1
 --validate: validates the package, takes longer than converting the item
---local: copies uses local schemas instead of ims schema's
+--local: copies schemas in the package.zip and uses local schemas instead of ims schema's
 
 package.zip validate22 or validate30 - validates 2.2 or 3.0 packages
 ```
