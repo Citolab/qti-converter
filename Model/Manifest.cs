@@ -4,20 +4,22 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
-using System.Text;
 using System.Xml.Linq;
 
 namespace QtiPackageConverter.Model
 {
     public class Manifest : XDocument
     {
+        private readonly QtiVersion _version;
         private readonly DirectoryInfo _packageLocation;
         private List<ResourceRef> _items = null;
         private List<ResourceRef> _genericResources = null;
         private ResourceRef _test = null;
-        public Manifest(DirectoryInfo packageLocation, Func<string, string> beforeManifest) : base(Parse(beforeManifest(File.ReadAllText(Path.Combine(packageLocation.FullName, "imsmanifest.xml")))))
+        public Manifest(DirectoryInfo packageLocation, QtiVersion version, Func<string, string> beforeManifest) : 
+            base(Parse(beforeManifest(File.ReadAllText(Path.Combine(packageLocation.FullName, "imsmanifest.xml")))))
         {
             _packageLocation = packageLocation;
+            _version = version;
         }
         public ResourceRef Test => _test ??= GetTest();
         public List<ResourceRef> Items => _items ??= GetItems();
@@ -54,17 +56,30 @@ namespace QtiPackageConverter.Model
 
         private List<ResourceRef> GetItems()
         {
-            return this.FindElementsByElementAndAttributeValue("resource", "type", "imsqti_item_xmlv2p1").
-                Select(d => new ResourceRef()
+            var resourceType = _version == QtiVersion.Qti21 ? "imsqti_item_xmlv2p1" :
+                _version == QtiVersion.Qti22 ? "imsqti_item_xmlv2p2" : "imsqti_item_xmlv3p0";
+            var items =
+                this.FindElementsByElementAndAttributeValue("resource", "type", resourceType).
+                Select(d =>
                 {
-                    Identifier = d.GetAttributeValue("identifier"),
-                    Href = d.GetAttributeValue("href")
+                    return new ResourceRef()
+                    {
+                        Identifier = d.GetAttributeValue("identifier"),
+                        Href = d.GetAttributeValue("href")
+                    };
                 }).ToList();
+            return items;
         }
 
         private List<ResourceRef> GetGenericResources()
         {
-            return this.FindElementsByElementAndAttributeValue("resource", "type", "associatedcontent/xmlv1p0/learning-application-resource").
+            var resourceType = _version == QtiVersion.Qti21 ? "associatedcontent/xmlv1p0/learning-application-resource" :
+                _version == QtiVersion.Qti22 ?
+                    "associatedcontent/dep_xmlv1p0/learning-application-resource" :
+                "associatedcontent/learning-application-resource";
+            var genericResources = this.FindElementsByElementAndAttributeValue("resource", "type", resourceType)
+                .Concat(this.FindElementsByElementAndAttributeValue("resource", "type", "webcontent"));
+            return genericResources.
                 Select(d => new ResourceRef()
                 {
                     Identifier = d.GetAttributeValue("identifier"),
@@ -74,7 +89,12 @@ namespace QtiPackageConverter.Model
 
         private ResourceRef GetTest()
         {
-            return this.FindElementsByElementAndAttributeValue("resource", "type", "imsqti_test_xmlv2p1").
+            var resourceType = _version == QtiVersion.Qti21 ?
+                "imsqti_test_xmlv2p1" :
+                _version == QtiVersion.Qti22 ?
+                    "imsqti_test_xmlv2p2" :
+                    "imsqti_test_xmlv3p0";
+            return this.FindElementsByElementAndAttributeValue("resource", "type", resourceType).
                 Select(d => new ResourceRef()
                 {
                     Identifier = d.GetAttributeValue("identifier"),

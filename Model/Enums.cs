@@ -4,6 +4,19 @@ using System.Text;
 
 namespace QtiPackageConverter.Model
 {
+    public enum QtiVersion
+    {
+        Qti21,
+        Qti22,
+        Qti30
+    }
+
+    public enum QtiResourceType
+    {
+        AssessmentItem,
+        AssessmentTest,
+        Manifest
+    }
     public enum InteractionType
     {
         Choice,

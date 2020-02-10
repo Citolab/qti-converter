@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -8,6 +10,8 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.Schema;
+using QtiPackageConverter.Model;
+using static System.Char;
 
 namespace QtiPackageConverter.Helper
 {
@@ -52,12 +56,16 @@ namespace QtiPackageConverter.Helper
             return s;
         }
 
-        public static bool Validate(this XDocument xDoc)
+        public static bool Validate(this XDocument xDoc, QtiVersion version)
         {
             var result = true;
             // Set the validation settings.
             using var sr = new StringReader(xDoc.ToString());
-            var reader = XmlReader.Create(sr, XsdHelper.GetXmlReaderSettings(ValidationEventHandler));
+
+            var reader = version == QtiVersion.Qti22 ? 
+                XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti22(ValidationEventHandler)) :
+                version == QtiVersion.Qti30 ? XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti22(ValidationEventHandler)) :
+                    throw new Exception("qti version not supported to be validated.");
 
             void ValidationEventHandler(object sender, ValidationEventArgs e)
             {
@@ -78,7 +86,7 @@ namespace QtiPackageConverter.Helper
                 }
             }
             // Parse the file. 
-            while (reader.Read());
+            while (reader.Read()) ;
             return result;
         }
 
@@ -99,6 +107,101 @@ namespace QtiPackageConverter.Helper
                               a.Value.Equals(attributeValue, StringComparison.OrdinalIgnoreCase)));
         }
 
+        public static IEnumerable<XElement> FindElementsByElementAndAttributeStartValue(this XDocument doc, string elementName, string attributeName, string attributeValue)
+        {
+            return doc.FindElementsByName(elementName)
+                .Where(element => element.Attributes()
+                    .Any(a => a.Name.LocalName.Equals(attributeName, StringComparison.OrdinalIgnoreCase) &&
+                              a.Value.ToLower().StartsWith(attributeValue.ToLower())));
+        }
+
+        public static string ReplaceRunsTabsAndLineBraks(this string text)
+        {
+            return text
+                .Replace("\n", " ")
+                .Replace("\t", " ")
+                .Replace("\r", " ");
+        }
+
+        private static string GetBaseSchema(QtiResourceType resourceType, QtiVersion version)
+        {
+            return XsdHelper.BaseSchemas[$"{resourceType.ToString()}-{version.ToString()}"];
+        }
+
+        public static string GetBaseSchemaLocation(QtiResourceType resourceType, QtiVersion version)
+        {
+            return XsdHelper.BaseSchemaLocations[$"{resourceType.ToString()}-{version.ToString()}"];
+        }
+
+        public static string ToLocalSchemas(this string xml, string xsdFolder, QtiVersion version)
+        {
+            var itemXsdLocation = GetBaseSchemaLocation(QtiResourceType.AssessmentItem, version);
+            var manifestXsdLocation = GetBaseSchemaLocation(QtiResourceType.Manifest, version);
+            xml = xml.Replace($"{itemXsdLocation}", $"{xsdFolder}/{Path.GetFileName(itemXsdLocation)}");
+            xml = xml.Replace($"{manifestXsdLocation}", $"{xsdFolder}/{Path.GetFileName(manifestXsdLocation)}");
+            return xml;
+        }
+
+        public static string ReplaceSchemas(this string xml, QtiResourceType resourceType, QtiVersion version, bool localSchema)
+        {
+            var tagName = resourceType == QtiResourceType.AssessmentItem ? "assessmentItem" :
+                resourceType == QtiResourceType.AssessmentTest ? "assessmentTest" :
+                "manifest";
+            var baseScheme = GetBaseSchema(resourceType, version);
+            var baseSchemeLocation = GetBaseSchemaLocation(resourceType, version);
+            var qtiParentTag = Regex.Match(xml, $"<{tagName}(.*?)>").Value;
+            var qtiParentOrg = qtiParentTag;
+            var schemaPrefix = Regex.Match(qtiParentTag, " (.*?)schemaLocation").Value.Replace(":schemaLocation", "").Trim();
+            schemaPrefix = schemaPrefix.Substring(schemaPrefix.LastIndexOf(" ", StringComparison.Ordinal), schemaPrefix.Length - schemaPrefix.LastIndexOf(" ", StringComparison.Ordinal)).Trim();
+
+            var schemaLocations = Regex.Match(qtiParentTag, @$"{schemaPrefix}:schemaLocation=""(.*?)""").Value;
+            var extensionSchemas = RemoveSchemaFromLocation(schemaLocations, GetBaseSchema(resourceType, QtiVersion.Qti21));
+            if (resourceType == QtiResourceType.Manifest)
+            {
+                extensionSchemas = RemoveSchemaFromLocation(extensionSchemas, GetBaseSchema(QtiResourceType.AssessmentItem, QtiVersion.Qti21));
+                extensionSchemas = extensionSchemas +
+                                   $" {GetBaseSchema(QtiResourceType.AssessmentItem, version)} {GetBaseSchemaLocation(QtiResourceType.AssessmentItem, version)}";
+            }
+
+            qtiParentTag = Regex.Replace(qtiParentTag, @$"{schemaPrefix}:schemaLocation=""(.*?)""", "");
+            qtiParentTag = Regex.Replace(qtiParentTag, @$"xmlns:{schemaPrefix}=""(.*?)""", "");
+            qtiParentTag = Regex.Replace(qtiParentTag, @$"xmlns:xsi=""(.*?)""", "");
+            qtiParentTag = Regex.Replace(qtiParentTag, @"xmlns=""(.*?)""", "");
+
+            if (localSchema)
+            {
+                var prefix = resourceType == QtiResourceType.Manifest ? "/" : "../";
+                baseSchemeLocation = $"{prefix}controlxsds/{Path.GetFileName(baseSchemeLocation)}";
+            }
+            var schemaLocation = $"xsi:schemaLocation=\"{baseScheme}  {baseSchemeLocation} ";
+
+            qtiParentTag = qtiParentTag.Replace($"{tagName} ",
+                $@"{tagName} xmlns=""{baseScheme}"" xmlns:xsi=""http://www.w3.org/2001/XMLSchema-instance"" " +
+                schemaLocation + "  " + extensionSchemas + @""" "
+            );
+
+            xml = xml.Replace(qtiParentOrg, qtiParentTag);
+            if (schemaPrefix != "xsi")
+            {
+                xml = xml.Replace($":{schemaPrefix}", ":xsi");
+                xml = xml.Replace($"{schemaPrefix}:", "xsi:");
+            }
+            return xml;
+        }
+
+        private static string RemoveSchemaFromLocation(string schemaLocations, string schemaToRemove)
+        {
+            var schemas = schemaLocations.Split(" ").ToList();
+            var schemaIndex = schemas.FindIndex(s => s.IndexOf(schemaToRemove, StringComparison.Ordinal) != -1);
+            var extensionSchemas = schemaIndex == -1
+                ? schemaLocations
+                : string.Join(" ", schemas.Where((schema) =>
+                        schemas.IndexOf(schema) != schemaIndex &&
+                        schemas.IndexOf(schema) != 1 + schemaIndex)
+                    .ToArray());
+            return extensionSchemas.Trim('"');
+        }
+
         public static string GetElementValue(this XElement el, string name)
         {
             return el.FindElementsByName(name).FirstOrDefault()?.Value ?? String.Empty;
@@ -115,6 +218,81 @@ namespace QtiPackageConverter.Helper
             var rg = new Regex(@"^[a-zA-Z0-9\s,]*$");
             return rg.IsMatch(strToCheck.ToString());
         }
+
+        public static void DeleteLocalImsSchemasToPackage(this Manifest manifest, string packageLocation)
+        {
+            var controlResourceList = manifest
+                .FindElementsByElementAndAttributeStartValue("resource", "type", "controlfile/")
+                .ToList();
+            var existingXsdReference = new List<string>();
+            if (controlResourceList.Any())
+            {
+                controlResourceList.ForEach(controlResource =>
+                {
+                    var xsdFiles = controlResource?.FindElementsByName("file").ToList();
+                    xsdFiles.ForEach(xsd =>
+                    {
+                        // trying to keep custom/extension schema's
+                        var file = Path.Combine(packageLocation, xsd.GetAttributeValue("href"));
+                        if (file.ToLower().Contains("ims") && !file.ToLower().Contains("ext"))
+                        {
+                            xsd.Remove();
+                        }
+                        else
+                        {
+                            existingXsdReference.Add(Path.GetFileName(file));
+                        }
+                    });
+                });
+                // delete all xsd files that are not in the manifest.
+                foreach (var file in Directory.GetFiles(packageLocation, "*.xsd", SearchOption.AllDirectories))
+                {
+                    if (!existingXsdReference.Contains(Path.GetFileName(file)))
+                    {
+                        File.Delete(file);
+                    }
+                }
+            }
+        }
+
+        public static void AddLocalSchemasToPackage(this Manifest manifest, string packageLocation, QtiVersion version)
+        {
+            var controlResources = manifest
+                .FindElementsByElementAndAttributeStartValue("resource", "type", "controlfile/xmlv1p0")
+                .FirstOrDefault();
+            if (controlResources == null)
+            {
+                var resources = manifest.FindElementByName("resources");
+                controlResources = XElement.Parse("<resource identifier=\"I_00001_CF\" type=\"controlfile/xmlv1p0\"></resource>");
+                resources?.Add(controlResources);
+            }
+            var xsdFolder = Path.Combine(packageLocation, "controlxsds");
+            if (!Directory.Exists(xsdFolder))
+            {
+                Directory.CreateDirectory(xsdFolder);
+            }
+            var applicationPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+            var schemaLocation = string.Empty;
+            switch (version)
+            {
+                case QtiVersion.Qti22:
+                    {
+                        schemaLocation = "Xsds/schema_qti22.zip";
+                        break;
+                    }
+                case QtiVersion.Qti30:
+                    {
+                        schemaLocation = "Xsds/schema_qti30.zip";
+                        break;
+                    }
+            }
+            ZipFile.ExtractToDirectory(Path.Combine(applicationPath, schemaLocation), xsdFolder);
+            Directory.GetFiles(xsdFolder, "*.xsd").ToList().ForEach(xsdFile =>
+            {
+                controlResources?.Add(XElement.Parse($"<file href=\"controlxsds/{Path.GetFileName(xsdFile)}\" />"));
+            });
+        }
+
 
 
         /// <summary>
@@ -196,33 +374,33 @@ namespace QtiPackageConverter.Helper
         {
             if (source is null) return null;
 
-            if (source.Length == 0) return String.Empty;
+            if (source.Length == 0) return string.Empty;
 
-            StringBuilder builder = new StringBuilder();
+            var builder = new StringBuilder();
 
             for (var i = 0; i < source.Length; i++)
             {
-                if (Char.IsLower(source[i])) // if current char is already lowercase
+                if (IsLower(source[i])) // if current char is already lowercase
                 {
                     builder.Append(source[i]);
                 }
                 else if (i == 0) // if current char is the first char
                 {
-                    builder.Append(Char.ToLower(source[i]));
+                    builder.Append(ToLower(source[i]));
                 }
-                else if (Char.IsLower(source[i - 1])) // if current char is upper and previous char is lower
+                else if (IsLower(source[i - 1])) // if current char is upper and previous char is lower
                 {
                     builder.Append("-");
-                    builder.Append(Char.ToLower(source[i]));
+                    builder.Append(ToLower(source[i]));
                 }
-                else if (i + 1 == source.Length || Char.IsUpper(source[i + 1])) // if current char is upper and next char doesn't exist or is upper
+                else if (i + 1 == source.Length || IsUpper(source[i + 1])) // if current char is upper and next char doesn't exist or is upper
                 {
-                    builder.Append(Char.ToLower(source[i]));
+                    builder.Append(ToLower(source[i]));
                 }
                 else // if current char is upper and next char is lower
                 {
                     builder.Append("-");
-                    builder.Append(Char.ToLower(source[i]));
+                    builder.Append(ToLower(source[i]));
                 }
             }
 

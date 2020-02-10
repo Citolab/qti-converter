@@ -1,8 +1,8 @@
 {
   "profiles": {
-    "ModifyQtiPackage": {
+    "ConvertOrValidate": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\TMP\\da\\packages\\faceit\\other\\faceit.zip 30"
+      "commandLineArgs": "C:\\TMP\\Nieuwe-toets.zip 22 --validate"
     }
   }
 }
