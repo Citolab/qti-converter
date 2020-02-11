@@ -12,7 +12,7 @@ under implementations and create your own converter.
 
 ## Prerequisites
 
-To run you neet the dotnet core 3.1 runtime and to build the sdk. Both can be found <a href="https://dotnet.microsoft.com/download/dotnet-core/3.1">here</a>.
+To run you need the dotnet core 3.1 runtime and to build the sdk. Both can be found <a href="https://dotnet.microsoft.com/download/dotnet-core/3.1">here</a>.
 
 ## Usage
 
