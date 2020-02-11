@@ -40,6 +40,7 @@ namespace QtiPackageConverter.Helper
             {$"{QtiResourceType.Manifest.ToString()}-{QtiVersion.Qti30.ToString()}", "http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1"},
         };
 
+        private static XmlReaderSettings Qti21ReaderSettings = null;
         private static XmlReaderSettings Qti22ReaderSettings = null;
         private static XmlReaderSettings Qti30ReaderSettings = null;
 
@@ -65,7 +66,6 @@ namespace QtiPackageConverter.Helper
             settings.Schemas.Add("http://www.imsglobal.org/xsd/apip/apipv1p0/imsapip_qtiv1p0", XmlReader.Create(Path.Combine(tempXsdsPath, @"apip\apipv1p0\imsapip_qtiv1p0\apipv1p0_qtiextv2p1_v1p0.xsd")));
             settings.Schemas.Add("http://www.w3.org/1999/xhtml", XmlReader.Create(Path.Combine(tempXsdsPath, @"xhtml\xhtml11.xsd")));
             settings.Schemas.Add("http://www.w3.org/2010/Math/MathML", XmlReader.Create(Path.Combine(tempXsdsPath, @"mathml3\mathml3.xsd")));
-            settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqtiv2p2_html5_v1p0", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv2p2p1_html5_v1p0.xsd")));
             settings.Schemas.Add("http://www.w3.org/2010/10/synthesis", XmlReader.Create(Path.Combine(tempXsdsPath, "ssmlv1p1-core.xsd")));
             settings.ValidationEventHandler += eventHandler;
             return settings;
@@ -82,6 +82,8 @@ namespace QtiPackageConverter.Helper
                         Encoding.UTF8, true);
                 }
                 var settings = GetXmlReaderSettings(eventHandler);
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqtiv2p2_html5_v1p0",
+                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv2p2p1_html5_v1p0.xsd")));
                 settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqti_v2p2",
 
                 XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_v2p2p1.xsd")));
@@ -94,10 +96,31 @@ namespace QtiPackageConverter.Helper
             return Qti22ReaderSettings;
         }
 
+        public static XmlReaderSettings GetXmlReaderSettingsQti21(ValidationEventHandler eventHandler, bool force = false)
+        {
+            if (Qti21ReaderSettings == null)
+            {
+                var tempXsdsPath = Path.Combine(Path.GetTempPath(), "qti-xsds-21");
+                if (!Directory.Exists(tempXsdsPath) || force)
+                {
+                    var applicationPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+                    ZipFile.ExtractToDirectory(Path.Combine(applicationPath, "Xsds/schema_qti21.zip"), tempXsdsPath,
+                        Encoding.UTF8, true);
+                }
+                var settings = GetXmlReaderSettings(eventHandler);
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqti_metadata_v2p1", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_metadata_v2p1.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqti_v2p1", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_v2p1.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imscp_v1p1", XmlReader.Create(Path.Combine(tempXsdsPath, "imscp_v1p2.xsd")));
+                Qti21ReaderSettings = settings;
+            }
+            return Qti21ReaderSettings;
+        }
         public static XmlReaderSettings GetXmlReaderSettingsQti30(ValidationEventHandler eventHandler, bool force = false)
         {
             if (Qti30ReaderSettings == null)
             {
+                //"http://www.w3.org/2010/10/synthesis"
+
                 var tempXsdsPath = Path.Combine(Path.GetTempPath(), "qti-xsds-30");
                 if (!Directory.Exists(tempXsdsPath) || force)
                 {
@@ -106,21 +129,25 @@ namespace QtiPackageConverter.Helper
                         Encoding.UTF8, true);
                 }
                 var settings = GetXmlReaderSettings(eventHandler);
-                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqtiasi_v3p0",
-                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_asiv3p0_v1p0.xsd")));
-                settings.Schemas.Add("http://ltsc.ieee.org/xsd/LOM",
-                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsmd_loose_v1p3p2.xsd")));
-                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1",
-                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_imscpv1p2_v1p0.xsd")));
-                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqti_metadata_v3p0",
-                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_metadatav3p0_v1p0.xsd")));
-                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_extensionv1p2",
-                    XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_cpextv1p2_v1p0.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqtiasi_v3p0", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_asiv3p0_v1p0.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_v1p1", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_imscpv1p2_v1p0.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imscsmd_v1p1", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_csmv1p1_v1p0.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/imsqti_metadata_v3p0", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqti_metadatav3p0_v1p0.xsd")));
+                settings.Schemas.Add("http://ltsc.ieee.org/xsd/LOM", XmlReader.Create(Path.Combine(tempXsdsPath, "imsmd_loose_v1p3p2.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imscp_extensionv1p2", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_cpextv1p2_v1p0.xsd")));
+                settings.Schemas.Add("http://www.imsglobal.org/xsd/qti/qtiv3p0/imsafa3p0drd_v1p0", XmlReader.Create(Path.Combine(tempXsdsPath, "imsqtiv3p0_afa3p0drd_v1p0.xsd")));
+
+                // This XSD differs from the QTI22 version because of APIP
+                
+                settings.Schemas.Remove(settings.GetSchemaByName("http://www.w3.org/2010/10/synthesis"));
+                settings.Schemas.Add("http://www.w3.org/2001/10/synthesis", XmlReader.Create(Path.Combine(tempXsdsPath, "ssmlv1p1-core.xsd")));
                 Qti30ReaderSettings = settings;
             }
             return Qti30ReaderSettings;
         }
     }
+
+
 
 
     public class PreventLoadingExternalXsdXmlResolver : XmlUrlResolver

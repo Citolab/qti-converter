@@ -13,10 +13,13 @@ using QtiPackageConverter.Model;
 
 namespace QtiPackageConverter.Implementations.ValidatePackage
 {
+
     public class Validate : BaseConverter
     {
+        private readonly string _extractedPackageLocation;
         public override void Convert()
         {
+            Manifest.AddLocalSchemasToPackage(_extractedPackageLocation, QtiVersion.Qti21);
             Items.ForEach(i =>
             {
                 Console.WriteLine($"Validing item: {i.Identifier}");
@@ -42,6 +45,7 @@ namespace QtiPackageConverter.Implementations.ValidatePackage
                 .ToLocalSchemas("/controlxsds", version)
         )
         {
+            _extractedPackageLocation = extractedPackageLocation.FullName;
         }
     }
 }

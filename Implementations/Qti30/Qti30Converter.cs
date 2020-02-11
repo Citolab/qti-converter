@@ -14,14 +14,14 @@ namespace QtiPackageConverter.Implementations.Qti30
         public Qti30Converter(DirectoryInfo extractedPackageLocation, bool localSchema) : base(
             extractedPackageLocation, xml => xml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti30, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti30, QtiVersion.Qti21, localSchema),
 
             testXml => testXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti30, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti30, QtiVersion.Qti21, localSchema),
             manifestXml => manifestXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti30, localSchema)
+                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti30, QtiVersion.Qti21, localSchema)
         )
         {
         }

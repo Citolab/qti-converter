@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using QtiPackageConverter.Implementations.Qti21;
 using QtiPackageConverter.Implementations.Qti22;
 using QtiPackageConverter.Implementations.Qti30;
 using QtiPackageConverter.Implementations.ValidatePackage;
@@ -16,7 +17,7 @@ namespace QtiPackageConverter
     {
         static void Main(string[] args)
         {
-            if (args.Length == 2 && args[1].ToLower().IndexOf("help", System.StringComparison.Ordinal) >= 0)
+            if (args.Length == 2 && args[1].ToLower().IndexOf("help", StringComparison.Ordinal) >= 0)
             {
                 // give help
                 Console.WriteLine(@"dotnet run QtiPackageConverter package.zip task:(30)");
@@ -57,6 +58,12 @@ namespace QtiPackageConverter
                                 converter = new Validate(packageFolder, QtiVersion.Qti22);
                                 break;
                             }
+                        case "validate21":
+                        {
+                            storeNewPackage = false;
+                            converter = new Validate(packageFolder, QtiVersion.Qti21);
+                            break;
+                        }
                         case "30":
                             {
                                 var local = args.ToList().Contains("--local");
@@ -70,6 +77,13 @@ namespace QtiPackageConverter
                                 converter = new Qti22Converter(packageFolder, local);
                                 break;
                             }
+                        case "21":
+                        {
+
+                            var local = args.ToList().Contains("--local");
+                            converter = new Qti21Converter(packageFolder, local);
+                            break;
+                        }
                         default:
                             throw new Exception($"ConvertManifest method '{args[1]}' not found. Options: dynamischeleestoets");
                     }
@@ -96,6 +110,11 @@ namespace QtiPackageConverter
                                 case "22":
                                 {
                                     converter = new Validate(newpackageFolder, QtiVersion.Qti22);
+                                    break;
+                                }
+                                case "21":
+                                {
+                                    converter = new Validate(newpackageFolder, QtiVersion.Qti21);
                                     break;
                                 }
                             }

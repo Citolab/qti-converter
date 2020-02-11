@@ -2,7 +2,7 @@
   "profiles": {
     "ConvertOrValidate": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\TMP\\Nieuwe-toets.zip 22 --validate"
+      "commandLineArgs": "C:\\TMP\\Nieuwe-toets.zip 30  --validate"
     }
   }
 }

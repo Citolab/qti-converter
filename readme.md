@@ -23,11 +23,12 @@ dotnet run QtiPackageConverter package.zip 30
 
 options: 
 ```sh
-package.zip 30 or 22: - converts 2.1 packages to 2.2 or 2.1
+package.zip 30 or 22: converts 2.1 packages to 2.2 or 2.1
+package.zip 21: converts 2.2 packages to 2.1
 --validate: validates the package, takes longer than converting the item
 --local: copies schemas in the package.zip and uses local schemas instead of ims schema's
 
-package.zip validate22 or validate30 - validates 2.2 or 3.0 packages
+package.zip validate21, validate22 or validate30 - validates 2.2 or 3.0 packages
 ```
 
 package.zip can be a relative or absolute path, but can also be a folder with multiple packages.
@@ -42,6 +43,3 @@ Without adding the 'use' attribute rubiksBlocks do not validate.
 Because we don't use them; they are removed, but feel free to change the code in ConvertItem.cs
 to do a proper 3.0 conversion.
 
-# Known issues
-XSD Validation does not yet work for 3.0 packages.
-Manifest of a converted 3.0 package is not correct.

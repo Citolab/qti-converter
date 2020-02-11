@@ -61,11 +61,13 @@ namespace QtiPackageConverter.Helper
             var result = true;
             // Set the validation settings.
             using var sr = new StringReader(xDoc.ToString());
-
-            var reader = version == QtiVersion.Qti22 ? 
-                XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti22(ValidationEventHandler)) :
-                version == QtiVersion.Qti30 ? XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti22(ValidationEventHandler)) :
-                    throw new Exception("qti version not supported to be validated.");
+            var reader = version == QtiVersion.Qti22
+                ?
+                XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti22(ValidationEventHandler))
+                : version == QtiVersion.Qti30
+                    ? XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti30(ValidationEventHandler))
+                    :
+                    XmlReader.Create(sr, XsdHelper.GetXmlReaderSettingsQti21(ValidationEventHandler));
 
             void ValidationEventHandler(object sender, ValidationEventArgs e)
             {
@@ -88,6 +90,18 @@ namespace QtiPackageConverter.Helper
             // Parse the file. 
             while (reader.Read()) ;
             return result;
+        }
+
+        public static XmlSchema GetSchemaByName(this XmlReaderSettings settings, string targetNamespace)
+        {
+            foreach (XmlSchema schema in settings.Schemas.Schemas())
+            {
+                if (schema.TargetNamespace == targetNamespace)
+                {
+                    return schema;
+                }
+            }
+            return null;
         }
 
 
@@ -124,43 +138,40 @@ namespace QtiPackageConverter.Helper
         }
 
         private static string GetBaseSchema(QtiResourceType resourceType, QtiVersion version)
-        {
-            return XsdHelper.BaseSchemas[$"{resourceType.ToString()}-{version.ToString()}"];
-        }
-
+            => XsdHelper.BaseSchemas[$"{resourceType.ToString()}-{version.ToString()}"];
+        
         public static string GetBaseSchemaLocation(QtiResourceType resourceType, QtiVersion version)
-        {
-            return XsdHelper.BaseSchemaLocations[$"{resourceType.ToString()}-{version.ToString()}"];
-        }
+            => XsdHelper.BaseSchemaLocations[$"{resourceType.ToString()}-{version.ToString()}"];
 
-        public static string ToLocalSchemas(this string xml, string xsdFolder, QtiVersion version)
+        public static string ToLocalSchemas(this string xml, string xsdFolder, QtiVersion newVersion)
         {
-            var itemXsdLocation = GetBaseSchemaLocation(QtiResourceType.AssessmentItem, version);
-            var manifestXsdLocation = GetBaseSchemaLocation(QtiResourceType.Manifest, version);
+            var itemXsdLocation = GetBaseSchemaLocation(QtiResourceType.AssessmentItem, newVersion);
+            var manifestXsdLocation = GetBaseSchemaLocation(QtiResourceType.Manifest, newVersion);
             xml = xml.Replace($"{itemXsdLocation}", $"{xsdFolder}/{Path.GetFileName(itemXsdLocation)}");
             xml = xml.Replace($"{manifestXsdLocation}", $"{xsdFolder}/{Path.GetFileName(manifestXsdLocation)}");
             return xml;
         }
 
-        public static string ReplaceSchemas(this string xml, QtiResourceType resourceType, QtiVersion version, bool localSchema)
+        public static string ReplaceSchemas(this string xml, QtiResourceType resourceType, QtiVersion newVersion, QtiVersion oldVersion, bool localSchema)
         {
             var tagName = resourceType == QtiResourceType.AssessmentItem ? "assessmentItem" :
                 resourceType == QtiResourceType.AssessmentTest ? "assessmentTest" :
                 "manifest";
-            var baseScheme = GetBaseSchema(resourceType, version);
-            var baseSchemeLocation = GetBaseSchemaLocation(resourceType, version);
+            var baseScheme = GetBaseSchema(resourceType, newVersion);
+            var baseSchemeLocation = GetBaseSchemaLocation(resourceType, newVersion);
             var qtiParentTag = Regex.Match(xml, $"<{tagName}(.*?)>").Value;
             var qtiParentOrg = qtiParentTag;
-            var schemaPrefix = Regex.Match(qtiParentTag, " (.*?)schemaLocation").Value.Replace(":schemaLocation", "").Trim();
+            var schemaPrefix = Regex.Match(qtiParentTag, " (.*?)schemaLocation")
+                .Value.Replace(":schemaLocation", "").Trim();
             schemaPrefix = schemaPrefix.Substring(schemaPrefix.LastIndexOf(" ", StringComparison.Ordinal), schemaPrefix.Length - schemaPrefix.LastIndexOf(" ", StringComparison.Ordinal)).Trim();
 
             var schemaLocations = Regex.Match(qtiParentTag, @$"{schemaPrefix}:schemaLocation=""(.*?)""").Value;
-            var extensionSchemas = RemoveSchemaFromLocation(schemaLocations, GetBaseSchema(resourceType, QtiVersion.Qti21));
+            var extensionSchemas = RemoveSchemaFromLocation(schemaLocations, GetBaseSchema(resourceType, oldVersion));
             if (resourceType == QtiResourceType.Manifest)
             {
-                extensionSchemas = RemoveSchemaFromLocation(extensionSchemas, GetBaseSchema(QtiResourceType.AssessmentItem, QtiVersion.Qti21));
+                extensionSchemas = RemoveSchemaFromLocation(extensionSchemas, GetBaseSchema(QtiResourceType.AssessmentItem, oldVersion));
                 extensionSchemas = extensionSchemas +
-                                   $" {GetBaseSchema(QtiResourceType.AssessmentItem, version)} {GetBaseSchemaLocation(QtiResourceType.AssessmentItem, version)}";
+                                   $" {GetBaseSchema(QtiResourceType.AssessmentItem, newVersion)} {GetBaseSchemaLocation(QtiResourceType.AssessmentItem, newVersion)}";
             }
 
             qtiParentTag = Regex.Replace(qtiParentTag, @$"{schemaPrefix}:schemaLocation=""(.*?)""", "");
@@ -191,7 +202,9 @@ namespace QtiPackageConverter.Helper
 
         private static string RemoveSchemaFromLocation(string schemaLocations, string schemaToRemove)
         {
-            var schemas = schemaLocations.Split(" ").ToList();
+            var schemas = schemaLocations.Split(" ")
+                .Where(s => !string.IsNullOrWhiteSpace(s))
+                .ToList();
             var schemaIndex = schemas.FindIndex(s => s.IndexOf(schemaToRemove, StringComparison.Ordinal) != -1);
             var extensionSchemas = schemaIndex == -1
                 ? schemaLocations
@@ -255,7 +268,7 @@ namespace QtiPackageConverter.Helper
             }
         }
 
-        public static void AddLocalSchemasToPackage(this Manifest manifest, string packageLocation, QtiVersion version)
+        public static void AddLocalSchemasToPackage(this Manifest manifest, string packageLocation, QtiVersion newVersion)
         {
             var controlResources = manifest
                 .FindElementsByElementAndAttributeStartValue("resource", "type", "controlfile/xmlv1p0")
@@ -272,21 +285,9 @@ namespace QtiPackageConverter.Helper
                 Directory.CreateDirectory(xsdFolder);
             }
             var applicationPath = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
-            var schemaLocation = string.Empty;
-            switch (version)
-            {
-                case QtiVersion.Qti22:
-                    {
-                        schemaLocation = "Xsds/schema_qti22.zip";
-                        break;
-                    }
-                case QtiVersion.Qti30:
-                    {
-                        schemaLocation = "Xsds/schema_qti30.zip";
-                        break;
-                    }
-            }
-            ZipFile.ExtractToDirectory(Path.Combine(applicationPath, schemaLocation), xsdFolder);
+            var version = newVersion == QtiVersion.Qti21 ? "21" : newVersion == QtiVersion.Qti22 ? "22" : "30";
+            var schemaLocation = $"Xsds/schema_qti{version}.zip";
+            ZipFile.ExtractToDirectory(Path.Combine(applicationPath, schemaLocation), xsdFolder, Encoding.Default, true);
             Directory.GetFiles(xsdFolder, "*.xsd").ToList().ForEach(xsdFile =>
             {
                 controlResources?.Add(XElement.Parse($"<file href=\"controlxsds/{Path.GetFileName(xsdFile)}\" />"));

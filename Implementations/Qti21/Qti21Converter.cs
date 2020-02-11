@@ -6,24 +6,24 @@ using QtiPackageConverter.Helper;
 using QtiPackageConverter.Base;
 using QtiPackageConverter.Model;
 
-namespace QtiPackageConverter.Implementations.Qti22
+namespace QtiPackageConverter.Implementations.Qti21
 {
-    public class Qti22Converter : BaseConverter
+    public class Qti21Converter : BaseConverter
     {
         private readonly DirectoryInfo _extractedPackageLocation;
         private readonly bool _localSchema;
 
-        public Qti22Converter(DirectoryInfo extractedPackageLocation, bool localSchema) : base(
-            extractedPackageLocation, xml => xml
+        public Qti21Converter(DirectoryInfo extractedPackageLocation, bool localSchema) : base(
+            extractedPackageLocation, QtiVersion.Qti22, xml => xml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti22, QtiVersion.Qti21, localSchema), 
+                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti21, QtiVersion.Qti22, localSchema), 
             
             testXml => testXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti22, QtiVersion.Qti21, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti21, QtiVersion.Qti22, localSchema),
             manifestXml => manifestXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti22, QtiVersion.Qti21, localSchema)
+                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti21, QtiVersion.Qti22, localSchema)
             )
         {
             _extractedPackageLocation = extractedPackageLocation;
@@ -35,14 +35,11 @@ namespace QtiPackageConverter.Implementations.Qti22
             {
                 ConvertManifestAndTest.ConvertManifest(Manifest, _extractedPackageLocation.FullName, _localSchema);
                 ConvertManifestAndTest.ConvertTest(Test);
-                var itemIndex = 0;
-                
                 foreach (var item in Items)
                 {
                     Console.WriteLine($"Converting item: {item.Identifier}");
                     var c = new ConvertItem(item, Manifest);
                     c.Convert();
-                    itemIndex++;
                 }
                 Manifest?.Save();
                 Console.WriteLine($"Successfully converted package");
