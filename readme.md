@@ -1,4 +1,4 @@
-# QTI Package Converter: Convert QTI2.x to QTI3.0
+# QTI Package Converter
 
 This package converter does a best effort to convert 2.1 packages to 3.0 or 2.2.
 It does a best effort to convert packages but is only tested with a few packages that have
@@ -12,7 +12,7 @@ under implementations and create your own converter.
 
 ## Prerequisites
 
-To run you neet the dotnet core 3.0 runtime and to build the sdk. Both can be found <a href="https://dotnet.microsoft.com/download/dotnet-core/3.0">here</a>.
+To run you neet the dotnet core 3.1 runtime and to build the sdk. Both can be found <a href="https://dotnet.microsoft.com/download/dotnet-core/3.1">here</a>.
 
 ## Usage
 
