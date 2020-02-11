@@ -90,11 +90,27 @@ namespace QtiPackageConverter
                     // call convert function
                     converter.Convert();
                     // save new package
+                    var newPackage = string.Empty;
                     if (storeNewPackage)
                     {
-                        var newPackage = Path.Combine(Path.GetDirectoryName(packageRef),
-                            $"{Path.GetFileNameWithoutExtension(packageRef)}-{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.zip");
-                        ZipFile.CreateFromDirectory(packageFolder.FullName, newPackage, CompressionLevel.Optimal, false);
+                        // if it's a folder then create a new folder and add converted package with original names
+                        if (packages.Count > 1)
+                        {
+                            var newFolder = Path.Combine(Path.GetDirectoryName(packageRef), args[1].ToLower());
+                            if (!Directory.Exists(newFolder))
+                            {
+                                Directory.CreateDirectory(newFolder);
+                            }
+                            newPackage = Path.Combine(newFolder, Path.GetFileName(packageRef));
+                            ZipFile.CreateFromDirectory(packageFolder.FullName, newPackage, CompressionLevel.Optimal, false);
+                        }
+                        else // if there is only one package then add the converted package next to the orginal one with date time stamp
+                        {
+                             newPackage = Path.Combine(Path.GetDirectoryName(packageRef),
+                                $"{Path.GetFileNameWithoutExtension(packageRef)}-{DateTime.Now:yyyy-MM-dd_hh-mm-ss}.zip");
+                            ZipFile.CreateFromDirectory(packageFolder.FullName, newPackage, CompressionLevel.Optimal, false);
+                        }
+                      
                         Console.WriteLine($"package successfully converted: {newPackage}");
                         if (args.ToList().Contains("--validate"))
                         {
