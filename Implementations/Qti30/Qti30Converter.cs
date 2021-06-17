@@ -11,20 +11,23 @@ namespace QtiPackageConverter.Implementations.Qti30
 {
     public class Qti30Converter : BaseConverter
     {
-        public Qti30Converter(DirectoryInfo extractedPackageLocation, bool localSchema) : base(
+        public Qti30Converter(DirectoryInfo extractedPackageLocation, bool localSchema, QtiVersion fromVersion) : base(
             extractedPackageLocation, xml => xml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti30, QtiVersion.Qti21, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti30, fromVersion, localSchema),
 
             testXml => testXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti30, QtiVersion.Qti21, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti30, fromVersion, localSchema),
             manifestXml => manifestXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti30, QtiVersion.Qti21, localSchema)
+                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti30, fromVersion, localSchema)
         )
         {
         }
+
+        public override QtiVersion ConvertsTo { get => QtiVersion.Qti30; }
+
         public override void Convert()
         {
             try

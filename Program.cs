@@ -64,24 +64,30 @@ namespace QtiPackageConverter
                             converter = new Validate(packageFolder, QtiVersion.Qti21);
                             break;
                         }
-                        case "30":
+                        case "22_30":
                             {
                                 var local = args.ToList().Contains("--local");
-                                converter = new Qti30Converter(packageFolder, local);
+                                converter = new Qti30Converter(packageFolder, local, QtiVersion.Qti22);
                                 break;
                             }
-                        case "22":
+                        case "21_30":
+                            {
+                                var local = args.ToList().Contains("--local");
+                                converter = new Qti30Converter(packageFolder, local, QtiVersion.Qti21);
+                                break;
+                            }
+                        case "21_22":
                             {
 
                                 var local = args.ToList().Contains("--local");
-                                converter = new Qti22Converter(packageFolder, local);
+                                converter = new Qti22Converter(packageFolder, local, QtiVersion.Qti21);
                                 break;
                             }
-                        case "21":
+                        case "22_21":
                         {
 
                             var local = args.ToList().Contains("--local");
-                            converter = new Qti21Converter(packageFolder, local);
+                            converter = new Qti21Converter(packageFolder, local, QtiVersion.Qti22);
                             break;
                         }
                         default:
@@ -116,6 +122,11 @@ namespace QtiPackageConverter
                         {
                             Console.WriteLine($"validating converted package.");
                             var newpackageFolder = ExtractPackage(newPackage);
+                            if (args[1].ToLower().Length > 2)
+                            {
+                                var newFormat = 
+
+                            }
                             switch (args[1].ToLower())
                             {
                                 case "30":

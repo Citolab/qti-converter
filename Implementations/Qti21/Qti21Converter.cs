@@ -12,18 +12,18 @@ namespace QtiPackageConverter.Implementations.Qti21
     {
         private readonly DirectoryInfo _extractedPackageLocation;
         private readonly bool _localSchema;
-
-        public Qti21Converter(DirectoryInfo extractedPackageLocation, bool localSchema) : base(
+        public override QtiVersion ConvertsTo { get => QtiVersion.Qti21; }
+        public Qti21Converter(DirectoryInfo extractedPackageLocation, bool localSchema, QtiVersion fromVersion) : base(
             extractedPackageLocation, QtiVersion.Qti22, xml => xml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti21, QtiVersion.Qti22, localSchema), 
-            
+                .ReplaceSchemas(QtiResourceType.AssessmentItem, QtiVersion.Qti21, fromVersion, localSchema),
+
             testXml => testXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti21, QtiVersion.Qti22, localSchema),
+                .ReplaceSchemas(QtiResourceType.AssessmentTest, QtiVersion.Qti21, fromVersion, localSchema),
             manifestXml => manifestXml
                 .ReplaceRunsTabsAndLineBraks()
-                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti21, QtiVersion.Qti22, localSchema)
+                .ReplaceSchemas(QtiResourceType.Manifest, QtiVersion.Qti21, fromVersion, localSchema)
             )
         {
             _extractedPackageLocation = extractedPackageLocation;

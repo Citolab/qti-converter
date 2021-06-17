@@ -17,6 +17,8 @@ namespace QtiPackageConverter.Implementations.ValidatePackage
     public class Validate : BaseConverter
     {
         private readonly string _extractedPackageLocation;
+        private readonly QtiVersion _qtiVersion;
+        public override QtiVersion ConvertsTo { get => _qtiVersion; }
         public override void Convert()
         {
             Manifest.AddLocalSchemasToPackage(_extractedPackageLocation, QtiVersion.Qti21);
@@ -45,6 +47,7 @@ namespace QtiPackageConverter.Implementations.ValidatePackage
                 .ToLocalSchemas("/controlxsds", version)
         )
         {
+            _qtiVersion = version;
             _extractedPackageLocation = extractedPackageLocation.FullName;
         }
     }

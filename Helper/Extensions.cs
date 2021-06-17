@@ -138,7 +138,7 @@ namespace QtiPackageConverter.Helper
         }
 
         private static string GetBaseSchema(QtiResourceType resourceType, QtiVersion version)
-            => XsdHelper.BaseSchemas[$"{resourceType.ToString()}-{version.ToString()}"];
+            => XsdHelper.BaseSchemas[$"{resourceType}-{version}"];
         
         public static string GetBaseSchemaLocation(QtiResourceType resourceType, QtiVersion version)
             => XsdHelper.BaseSchemaLocations[$"{resourceType.ToString()}-{version.ToString()}"];

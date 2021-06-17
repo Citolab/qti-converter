@@ -15,6 +15,7 @@ namespace QtiPackageConverter.Base
         public Manifest Manifest { get; set; }
         public XResource Test { get; set; }
         public List<XItem> Items { get; set; }
+        public abstract QtiVersion ConvertsTo { get; }
 
         protected BaseConverter(DirectoryInfo extractedPackageLocation, 
             QtiVersion currentVersion,

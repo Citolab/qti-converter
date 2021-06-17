@@ -16,20 +16,27 @@ To run you need the dotnet core 3.1 runtime and to build the sdk. Both can be fo
 
 ## Usage
 
+The following commands will convert a qti 2.1 package to qti 3.0:
+
 ```sh
 dotnet restore
-dotnet run QtiPackageConverter package.zip 30
+dotnet run QtiPackageConverter package.zip 21_30 --validate
 ```
 
-options: 
-```sh
-package.zip 30 or 22: converts 2.1 packages to 2.2 or 2.1
-package.zip 21: converts 2.2 packages to 2.1
---validate: validates the package, takes longer than converting the item
---local: copies schemas in the package.zip and uses local schemas instead of ims schema's
+### conversion types: 
 
-package.zip validate21, validate22 or validate30 - validates 2.2 or 3.0 packages
-```
+* 22_30 : converts 2.2 to 3.0
+* 21_30 : converts 2.1 to 3.0
+* 21_22 : converts 2.1 to 2.2
+* 22_21 : converts 2.2 to 2.1
+* validate30 : validates a 3.0 package
+* validate22 : validates a 2.2 package
+* validate21 : validates a 2.1 package
+
+### other options:
+
+* -- local: copies schemas in the package.zip and uses local schemas instead of ims-schema's
+* -- validate: validates the package after conversion
 
 package.zip can be a relative or absolute path, but can also be a folder with multiple packages.
 
